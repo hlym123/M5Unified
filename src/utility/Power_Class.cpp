@@ -162,6 +162,7 @@ namespace m5
 
     case board_t::board_M5StackCoreS3:
     case board_t::board_M5StackCoreS3SE:
+    case board_t::board_M5StackChan:
       M5.In_I2C.bitOn(aw9523_i2c_addr, 0x03, 0b10000000, i2c_freq);  // SY7088 BOOST_EN
       _pmic = Power_Class::pmic_t::pmic_axp2101;
       Axp2101.begin();
@@ -617,6 +618,7 @@ namespace m5
 #elif defined (CONFIG_IDF_TARGET_ESP32S3)
     case board_t::board_M5StackCoreS3:
     case board_t::board_M5StackCoreS3SE:
+    case board_t::board_M5StackChan:
       {
         bool cancel = (enable && !Axp2101.getBatState() && Axp2101.getTSVoltage() > 2.0f && Axp2101.isVBUS());
         if (!cancel)
@@ -745,6 +747,7 @@ namespace m5
 #elif defined (CONFIG_IDF_TARGET_ESP32S3)
     case board_t::board_M5StackCoreS3:
     case board_t::board_M5StackCoreS3SE:
+    case board_t::board_M5StackChan:
       {
         static constexpr const uint32_t port0_bitmask = 0b00000010; // BUS EN
         static constexpr const uint8_t port0_reg = 0x02;
@@ -810,6 +813,7 @@ namespace m5
 #if defined (CONFIG_IDF_TARGET_ESP32S3)
     case board_t::board_M5StackCoreS3:
     case board_t::board_M5StackCoreS3SE:
+    case board_t::board_M5StackChan:
       _core_s3_output(_core_s3_usb_en, enable);
       break;
 
@@ -826,6 +830,7 @@ namespace m5
 #if defined (CONFIG_IDF_TARGET_ESP32S3)
     case board_t::board_M5StackCoreS3:
     case board_t::board_M5StackCoreS3SE:
+    case board_t::board_M5StackChan:
       {
         static constexpr const uint8_t reg = 0x02;
         return M5.In_I2C.readRegister8(aw9523_i2c_addr, reg, i2c_freq) & _core_s3_usb_en;

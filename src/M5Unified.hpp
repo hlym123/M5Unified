@@ -386,7 +386,8 @@ namespace m5
 #if defined (CONFIG_IDF_TARGET_ESP32P4)
         if (_board == board_t::board_M5Tab5)
 #elif defined (CONFIG_IDF_TARGET_ESP32S3)
-        if (_board == board_t::board_M5StackCoreS3 || _board == board_t::board_M5StackCoreS3SE)
+        if (_board == board_t::board_M5StackCoreS3 || _board == board_t::board_M5StackCoreS3SE
+         || _board == board_t::board_M5StackChan)
 #elif !defined (CONFIG_IDF_TARGET) || defined (CONFIG_IDF_TARGET_ESP32)
         if (_board == board_t::board_M5Stack || _board == board_t::board_M5StackCore2 || _board == board_t::board_M5Tough)
 #else

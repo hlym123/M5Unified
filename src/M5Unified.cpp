@@ -76,6 +76,7 @@ static constexpr const uint8_t _pin_table_i2c_ex_in[][5] = {
 #if defined (CONFIG_IDF_TARGET_ESP32S3)
 { board_t::board_M5StackCoreS3, GPIO_NUM_11,GPIO_NUM_12 , GPIO_NUM_1 ,GPIO_NUM_2  },
 { board_t::board_M5StackCoreS3SE,GPIO_NUM_11,GPIO_NUM_12, GPIO_NUM_1 ,GPIO_NUM_2  },
+{ board_t::board_M5StackChan  , GPIO_NUM_11, GPIO_NUM_12, GPIO_NUM_1, GPIO_NUM_2  },
 { board_t::board_M5StickS3    , GPIO_NUM_48,GPIO_NUM_47 , GPIO_NUM_10,GPIO_NUM_9  },
 { board_t::board_M5StampS3    , 255        ,255         , GPIO_NUM_15,GPIO_NUM_13 },
 { board_t::board_M5Capsule    , GPIO_NUM_10,GPIO_NUM_8  , GPIO_NUM_15,GPIO_NUM_13 },
@@ -123,6 +124,7 @@ static constexpr const uint8_t _pin_table_port_bc[][5] = {
 #if defined (CONFIG_IDF_TARGET_ESP32S3)
 { board_t::board_M5StackCoreS3, GPIO_NUM_8 ,GPIO_NUM_9 , GPIO_NUM_18,GPIO_NUM_17 },
 { board_t::board_M5StackCoreS3SE,GPIO_NUM_8,GPIO_NUM_9 , GPIO_NUM_18,GPIO_NUM_17 },
+{ board_t::board_M5StackChan  , GPIO_NUM_8, GPIO_NUM_9, GPIO_NUM_18, GPIO_NUM_17 },
 { board_t::board_M5Dial       , GPIO_NUM_1 ,GPIO_NUM_2 , 255        ,255         },
 { board_t::board_M5DinMeter   , GPIO_NUM_1 ,GPIO_NUM_2 , 255        ,255         },
 { board_t::board_M5PowerHub   , 255        ,       255 , GPIO_NUM_1 ,GPIO_NUM_2  },
@@ -146,6 +148,7 @@ static constexpr const uint8_t _pin_table_port_de[][5] = {
 #if defined (CONFIG_IDF_TARGET_ESP32S3)
 { board_t::board_M5StackCoreS3, 14,10, 18,17 },
 { board_t::board_M5StackCoreS3SE,14,10,18,17 },
+{ board_t::board_M5StackChan, 14, 10, 18, 17 },
 #elif defined (CONFIG_IDF_TARGET_ESP32C3)
 #elif defined (CONFIG_IDF_TARGET_ESP32C6)
 #else
@@ -161,6 +164,7 @@ static constexpr const uint8_t _pin_table_spi_sd[][5] = {
 #if defined (CONFIG_IDF_TARGET_ESP32S3)
 { board_t::board_M5StackCoreS3, GPIO_NUM_36, GPIO_NUM_37, GPIO_NUM_35, GPIO_NUM_4  },
 { board_t::board_M5StackCoreS3SE,GPIO_NUM_36,GPIO_NUM_37, GPIO_NUM_35, GPIO_NUM_4  },
+{ board_t::board_M5StackChan  , GPIO_NUM_36, GPIO_NUM_37, GPIO_NUM_35, GPIO_NUM_4 },
 { board_t::board_M5Capsule    , GPIO_NUM_14, GPIO_NUM_12, GPIO_NUM_39, GPIO_NUM_11 },
 { board_t::board_M5Cardputer  , GPIO_NUM_40, GPIO_NUM_14, GPIO_NUM_39, GPIO_NUM_12 },
 { board_t::board_M5CardputerADV,GPIO_NUM_40, GPIO_NUM_14, GPIO_NUM_39, GPIO_NUM_12 },
@@ -273,6 +277,23 @@ static constexpr const uint8_t _pin_table_mbus[][31] = {
   255        , 255        ,
 },
 { board_t::board_M5StackCoreS3SE,
+  255        , GPIO_NUM_10,
+  255        , GPIO_NUM_8 ,
+  255        , 255        ,
+  GPIO_NUM_37, GPIO_NUM_5 ,
+  GPIO_NUM_35, GPIO_NUM_9 ,
+  GPIO_NUM_36, 255        ,
+  GPIO_NUM_44, GPIO_NUM_43,
+  GPIO_NUM_18, GPIO_NUM_17,
+  GPIO_NUM_12, GPIO_NUM_11,
+  GPIO_NUM_2 , GPIO_NUM_1 ,
+  GPIO_NUM_6 , GPIO_NUM_7 ,
+  GPIO_NUM_13, GPIO_NUM_0 ,
+  255        , GPIO_NUM_14,
+  255        , 255        ,
+  255        , 255        ,
+},
+{ board_t::board_M5StackChan,
   255        , GPIO_NUM_10,
   255        , GPIO_NUM_8 ,
   255        , 255        ,
@@ -1875,6 +1896,7 @@ static constexpr const uint8_t _pin_table_mbus[][31] = {
 #elif defined (CONFIG_IDF_TARGET_ESP32S3)
       case board_t::board_M5StackCoreS3:
       case board_t::board_M5StackCoreS3SE:
+      case board_t::board_M5StackChan:
         if (cfg.internal_mic)
         {
           mic_cfg.magnification = 2;
@@ -2045,6 +2067,7 @@ static constexpr const uint8_t _pin_table_mbus[][31] = {
 #elif defined (CONFIG_IDF_TARGET_ESP32S3)
       case board_t::board_M5StackCoreS3:
       case board_t::board_M5StackCoreS3SE:
+      case board_t::board_M5StackChan:
         if (cfg.internal_spk)
         {
           spk_cfg.pin_bck = GPIO_NUM_34;
@@ -2388,7 +2411,8 @@ static constexpr const uint8_t _pin_table_mbus[][31] = {
 #elif defined ( CONFIG_IDF_TARGET_ESP32S3 )
  #define ENABLE_M5MODULE
         if (_board == board_t::board_M5StackCoreS3
-         || _board == board_t::board_M5StackCoreS3SE)
+         || _board == board_t::board_M5StackCoreS3SE
+         || _board == board_t::board_M5StackChan)
 #elif defined ( CONFIG_IDF_TARGET_ESP32 ) || !defined ( CONFIG_IDF_TARGET )
  #define ENABLE_M5MODULE
         if (  _board == board_t::board_M5Stack
@@ -2489,6 +2513,7 @@ static constexpr const uint8_t _pin_table_mbus[][31] = {
       case board_t::board_M5Tough:
       case board_t::board_M5StackCoreS3SE:
       case board_t::board_M5StackCoreS3:
+      case board_t::board_M5StackChan:
         tb_y = 240;
         tb_k = 614; // (65536*3/320)
         break;
@@ -2780,6 +2805,7 @@ static constexpr const uint8_t _pin_table_mbus[][31] = {
     case board_t::board_M5Tough:
     case board_t::board_M5StackCoreS3SE:
     case board_t::board_M5StackCoreS3:
+    case board_t::board_M5StackChan:
       height = 240;
       break;
     case board_t::board_M5Paper:
