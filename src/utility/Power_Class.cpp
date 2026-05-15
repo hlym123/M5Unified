@@ -8,7 +8,7 @@
 
 #include <esp_log.h>
 #include <esp_sleep.h>
-#include "driver/rtc_io.h"
+#include <driver/rtc_io.h>
 #include <sdkconfig.h>
 
 #include <soc/soc_caps.h>
@@ -32,11 +32,11 @@ namespace m5
   static constexpr const uint32_t i2c_freq = 100000;
 
 #if !defined (M5UNIFIED_PC_BUILD)
-  static constexpr uint8_t py32pmic_i2c_addr = 0x6E;
+  static constexpr uint8_t m5pm1_i2c_addr = 0x6E;
+
 #if defined (CONFIG_IDF_TARGET_ESP32S3)
   static constexpr uint8_t aw9523_i2c_addr = 0x58;
   static constexpr uint8_t powerhub_i2c_addr = 0x50;
-  static constexpr uint8_t m5pm1_i2c_addr = 0x6E;
   static constexpr int M5PaperS3_CHG_STAT_PIN = GPIO_NUM_4;
 
 #elif defined (CONFIG_IDF_TARGET_ESP32C6)
@@ -615,6 +615,8 @@ namespace m5
       M5.getIOExpander(1).digitalWrite(2, enable); // 2 = EXT_PWR_EN
       break;
 
+#elif defined (CONFIG_IDF_TARGET_ESP32H2)
+
 #elif defined (CONFIG_IDF_TARGET_ESP32S3)
     case board_t::board_M5StackCoreS3:
     case board_t::board_M5StackCoreS3SE:
@@ -743,6 +745,8 @@ namespace m5
 #elif defined (CONFIG_IDF_TARGET_ESP32C6)
     case board_t::board_ArduinoNessoN1:
       return M5.getIOExpander(1).getWriteValue(2); // E1-> 2 = EXT_PWR_EN
+
+#elif defined (CONFIG_IDF_TARGET_ESP32H2)
 
 #elif defined (CONFIG_IDF_TARGET_ESP32S3)
     case board_t::board_M5StackCoreS3:
@@ -1182,8 +1186,10 @@ namespace m5
 #elif SOC_PM_SUPPORT_EXT1_WAKEUP && SOC_RTCIO_PIN_COUNT > 0
       const uint64_t ext_wakeup_pin_1_mask = 1ULL << _wakeupPin;
       ESP_ERROR_CHECK(esp_sleep_enable_ext1_wakeup_io(ext_wakeup_pin_1_mask, ESP_EXT1_WAKEUP_ANY_LOW));
+ #if SOC_RTCIO_INPUT_OUTPUT_SUPPORTED
       ESP_ERROR_CHECK(rtc_gpio_pullup_dis((gpio_num_t)_wakeupPin));
       ESP_ERROR_CHECK(rtc_gpio_pulldown_en((gpio_num_t)_wakeupPin));
+ #endif
 #endif
       while (m5gfx::gpio_in(wpin) == false)
       {
@@ -1212,7 +1218,7 @@ namespace m5
     (void)touch_wakeup;
 #else
     ESP_LOGD("Power","lightSleep");
-#if defined (CONFIG_IDF_TARGET_ESP32C3) || defined (CONFIG_IDF_TARGET_ESP32C6) || defined (CONFIG_IDF_TARGET_ESP32P4)
+#if defined (CONFIG_IDF_TARGET_ESP32C3) || defined (CONFIG_IDF_TARGET_ESP32C6) || defined (CONFIG_IDF_TARGET_ESP32H2) || defined (CONFIG_IDF_TARGET_ESP32P4)
 
 #else
 

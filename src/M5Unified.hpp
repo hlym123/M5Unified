@@ -362,9 +362,9 @@ namespace m5
 #if defined ( __M5GFX_M5ATOMDISPLAY__ )
       if (cfg.external_display.atom_display) {
 #if defined (CONFIG_IDF_TARGET_ESP32S3)
-        if (_board == board_t::board_M5AtomS3 || _board == board_t::board_M5AtomS3Lite || _board == board_t::board_M5AtomS3R || _board == board_t::board_M5AtomS3RCam || _board == board_t::board_M5AtomS3RExt || _board == board_t::board_M5AtomEchoS3R)
+        if (_board == board_t::board_M5AtomS3 || _board == board_t::board_M5AtomS3Lite || _board == board_t::board_M5AtomS3R || _board == board_t::board_M5AtomS3RCam || _board == board_t::board_M5AtomS3RExt || _board == board_t::board_M5AtomVoiceS3R)
 #elif !defined (CONFIG_IDF_TARGET) || defined (CONFIG_IDF_TARGET_ESP32)
-        if (_board == board_t::board_M5AtomLite || _board == board_t::board_M5AtomMatrix || _board == board_t::board_M5AtomEcho || _board == board_t::board_M5AtomPsram)
+        if (_board == board_t::board_M5AtomLite || _board == board_t::board_M5AtomMatrix || _board == board_t::board_M5AtomVoice || _board == board_t::board_M5AtomPsram)
 #else
         if (false)
 #endif
@@ -580,7 +580,7 @@ namespace m5
               || (!port_a_used && ( // ATOM does not allow video output via UnitRCA when PortA is used.
                    board == board_t::board_M5AtomLite
                 || board == board_t::board_M5AtomMatrix
-                || board == board_t::board_M5AtomEcho
+                || board == board_t::board_M5AtomVoice
                 || board == board_t::board_M5AtomPsram
                 || board == board_t::board_M5AtomU
               )))
