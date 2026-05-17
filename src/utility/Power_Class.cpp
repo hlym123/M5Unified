@@ -181,6 +181,7 @@ namespace m5
       break;
 
     case board_t::board_M5StickS3:
+    case board_t::board_M5StopWatch:
       _pmic = pmic_t::pmic_m5pm1;
       {
         // Configure PM1_G0 as input mode for charging status reading
@@ -233,7 +234,7 @@ namespace m5
       {
         M5.In_I2C.bitOn(m5pm1_i2c_addr, 0x06, 1 << 2, i2c_freq);  // Enable LDO (RGB PWR EN)
         // Turn on TF Card Power
-        M5.In_I2C.bitOff(m5pm1_i2c_addr, 0x16, 1 << 3, i2c_freq); // Set pin gpio3 as gpio function
+        M5.In_I2C.bitOff(m5pm1_i2c_addr, 0x16, 0b11 << 6, i2c_freq); // GPIO3 -> GPIO function
         M5.In_I2C.bitOn(m5pm1_i2c_addr, 0x10, 1 << 3, i2c_freq);  // Set pin gpio3 mode: output
         M5.In_I2C.bitOff(m5pm1_i2c_addr, 0x13, 1 << 3, i2c_freq); // Set gpio3 push-pull mode
         M5.In_I2C.bitOn(m5pm1_i2c_addr, 0x11, 1 << 3, i2c_freq); // Set gpio3 output high

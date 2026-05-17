@@ -638,6 +638,7 @@ namespace m5
     static bool _speaker_enabled_cb_core2(void* args, bool enabled);
     static bool _speaker_enabled_cb_cores3(void* args, bool enabled);
     static bool _speaker_enabled_cb_sticks3(void* args, bool enabled);
+    static bool _speaker_enabled_cb_stopwatch(void* args, bool enabled);
     static bool _speaker_enabled_cb_papercolor(void* args, bool enabled);
     static bool _speaker_enabled_cb_tab5(void* args, bool enabled);
     static bool _speaker_enabled_cb_cardputer_adv(void* args, bool enabled);
@@ -647,6 +648,7 @@ namespace m5
     static bool _microphone_enabled_cb_cores3(void* args, bool enabled);
     static bool _microphone_enabled_cb_stickc(void* args, bool enabled);
     static bool _microphone_enabled_cb_sticks3(void* args, bool enabled);
+    static bool _microphone_enabled_cb_stopwatch(void* args, bool enabled);
     static bool _microphone_enabled_cb_papercolor(void* args, bool enabled);
     static bool _microphone_enabled_cb_tab5(void* args, bool enabled);
     static bool _microphone_enabled_cb_cardputer_adv(void* args, bool enabled);
