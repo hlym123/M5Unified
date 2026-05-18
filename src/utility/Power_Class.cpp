@@ -37,6 +37,7 @@ namespace m5
 #if defined (CONFIG_IDF_TARGET_ESP32S3)
   static constexpr uint8_t aw9523_i2c_addr = 0x58;
   static constexpr uint8_t powerhub_i2c_addr = 0x50;
+  static constexpr uint8_t m5ioe1_i2c_addr = 0x4F;
   static constexpr int M5PaperS3_CHG_STAT_PIN = GPIO_NUM_4;
 
 #elif defined (CONFIG_IDF_TARGET_ESP32C6)
@@ -192,6 +193,30 @@ namespace m5
         reg_val = M5.In_I2C.readRegister8(m5pm1_i2c_addr, 0x10, i2c_freq);
         reg_val &= ~(1 << 0);  // Clear bit 0 (input mode)
         M5.In_I2C.writeRegister8(m5pm1_i2c_addr, 0x10, reg_val, i2c_freq);
+      }
+      break;
+
+    case board_t::board_M5StopWatch:
+      _pmic = pmic_t::pmic_m5pm1;
+      {
+        // M5PM1: GPIO2 as GPIO input (charge status on G2; low = charging). REG_GPIO_FUNC0 0x16 [5:4]=00.
+        uint8_t reg_val = M5.In_I2C.readRegister8(m5pm1_i2c_addr, 0x16, i2c_freq);
+        reg_val &= static_cast<uint8_t>(~(0x03u << 4));
+        M5.In_I2C.writeRegister8(m5pm1_i2c_addr, 0x16, reg_val, i2c_freq);
+        reg_val = M5.In_I2C.readRegister8(m5pm1_i2c_addr, 0x10, i2c_freq);
+        reg_val &= static_cast<uint8_t>(~(1u << 2));  // REG_GPIO_MODE: 0=input
+        M5.In_I2C.writeRegister8(m5pm1_i2c_addr, 0x10, reg_val, i2c_freq);
+
+        // M5IOE1: PWM1 drives IO9 (G9 motor). REG_PWM_FREQ 0x25/0x26 Hz LE; REG_PWM1_DUTY 0x1B/0x1C (bit7 EN).
+        constexpr uint16_t motor_pwm_hz = 2000;
+        M5.In_I2C.writeRegister8(m5ioe1_i2c_addr, 0x23, 0x00, i2c_freq);  // REG_I2C_CFG: disable I2C sleep
+        uint8_t pwm_freq_le[2] = {
+          static_cast<uint8_t>(motor_pwm_hz & 0xFF),
+          static_cast<uint8_t>((motor_pwm_hz >> 8) & 0xFF),
+        };
+        M5.In_I2C.writeRegister(m5ioe1_i2c_addr, 0x25, pwm_freq_le, sizeof(pwm_freq_le), i2c_freq);
+        M5.In_I2C.writeRegister8(m5ioe1_i2c_addr, 0x1B, 0x00, i2c_freq);
+        M5.In_I2C.writeRegister8(m5ioe1_i2c_addr, 0x1C, 0x00, i2c_freq);  // PWM off at boot
       }
       break;
 
@@ -633,6 +658,7 @@ namespace m5
       break;
 
     case board_t::board_M5StickS3:
+    case board_t::board_M5StopWatch:
     case board_t::board_M5PaperColor:
       if (_pmic == pmic_t::pmic_m5pm1)
       {
@@ -769,6 +795,7 @@ namespace m5
       break;
 
     case board_t::board_M5StickS3:
+    case board_t::board_M5StopWatch:
     case board_t::board_M5PaperColor:
       {
         // Read 5V output status: register 0x06 bit 3
@@ -1841,7 +1868,7 @@ namespace m5
     default:
       switch (M5.getBoard()) {
 #if defined (CONFIG_IDF_TARGET_ESP32S3)
-      case board_t::board_M5StickS3:
+        case board_t::board_M5StickS3:
         {
           // PM1_G0 is charging status input pin, low=charging / high=not charging
           uint8_t reg_val = M5.In_I2C.readRegister8(m5pm1_i2c_addr, 0x12, i2c_freq);
@@ -1849,7 +1876,8 @@ namespace m5
         }
         break;
       
-      case board_t::board_M5StampS3Bat:
+        case board_t::board_M5StopWatch: // M5PM1_G2
+        case board_t::board_M5StampS3Bat: // M5PM1_G2
         {
           // PM1_G2 is charging status input pin, low=charging / high=not charging
           uint8_t reg_val = M5.In_I2C.readRegister8(m5pm1_i2c_addr, 0x12, i2c_freq);
@@ -1908,6 +1936,7 @@ namespace m5
       }
 
       case board_t::board_M5StampS3Bat:
+      case board_t::board_M5StopWatch:
       case board_t::board_M5StickS3: {
         // Read output voltage from device PM1: register 0x26 (5VOUT_L) and 0x27 (5VOUT_H)
         // Unit: mV, format: (5VOUT_H << 8) | 5VOUT_L
@@ -1997,6 +2026,22 @@ namespace m5
 
   void Power_Class::setVibration(uint8_t level)
   {
+#if !defined (M5UNIFIED_PC_BUILD) && defined (CONFIG_IDF_TARGET_ESP32S3)
+    if (M5.getBoard() == board_t::board_M5StopWatch)
+    {
+      // M5IOE1 PWM1 (0x1B/0x1C) -> pin IO9 / G9 motor; duty 12-bit in [11:0], EN=bit7 of high byte.
+      if (level == 0) {
+        M5.In_I2C.writeRegister8(m5ioe1_i2c_addr, 0x1B, 0x00, i2c_freq);
+        M5.In_I2C.writeRegister8(m5ioe1_i2c_addr, 0x1C, 0x00, i2c_freq);
+      } else {
+        uint16_t duty12 = static_cast<uint16_t>((static_cast<uint32_t>(level) * 0x0FFFu) / 255u);
+        uint8_t duty_h = static_cast<uint8_t>(((duty12 >> 8) & 0x0Fu) | 0x80u);
+        M5.In_I2C.writeRegister8(m5ioe1_i2c_addr, 0x1B, static_cast<uint8_t>(duty12 & 0xFF), i2c_freq);
+        M5.In_I2C.writeRegister8(m5ioe1_i2c_addr, 0x1C, duty_h, i2c_freq);
+      }
+      return;
+    }
+#endif
 #if !defined (CONFIG_IDF_TARGET) || defined (CONFIG_IDF_TARGET_ESP32)
     if (M5.getBoard() == board_t::board_M5StackCore2)
     {

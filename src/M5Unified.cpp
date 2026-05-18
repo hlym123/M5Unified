@@ -406,6 +406,7 @@ static constexpr const uint8_t _pin_table_mbus[][31] = {
   static constexpr uint8_t es8388_i2c_addr = 0x10;
   static constexpr uint8_t pi4io1_i2c_addr = 0x43;
   static constexpr uint8_t m5pm1_i2c_addr = 0x6E;
+  static constexpr uint8_t m5ioe1_i2c_addr = 0x4F;
 #if defined (CONFIG_IDF_TARGET_ESP32S3)
   static constexpr uint8_t aw88298_i2c_addr = 0x36;
   static constexpr uint8_t aw9523_i2c_addr = 0x58;
@@ -553,6 +554,38 @@ static constexpr const uint8_t _pin_table_mbus[][31] = {
         m5gfx::gpio_lo(codec_en_pin);
         m5gfx::gpio_lo(spk_en_pin);
       }
+    }
+#endif
+    return true;
+  }
+
+  bool M5Unified::_speaker_enabled_cb_stopwatch(void* args, bool enabled)
+  {
+#if defined (CONFIG_IDF_TARGET_ESP32S3)
+    auto self = (M5Unified*)args;
+
+    static constexpr const uint8_t enabled_bulk_data[] = {
+      2, 0x00, 0x80,  // 0x00 RESET/  CSM POWER ON
+      2, 0x01, 0xB5,  // 0x01 CLOCK_MANAGER/ MCLK=BCLK
+      2, 0x02, 0x18,  // 0x02 CLOCK_MANAGER/ MULT_PRE=3
+      2, 0x0D, 0x01,  // 0x0D SYSTEM/ Power up analog circuitry
+      2, 0x12, 0x00,  // 0x12 SYSTEM/ power-up DAC - NOT default
+      2, 0x13, 0x10,  // 0x13 SYSTEM/ Enable output to HP drive - NOT default
+      2, 0x32, 0xBF,  // 0x32 DAC/ DAC volume (0xBF == ±0 dB )
+      2, 0x37, 0x08,  // 0x37 DAC/ Bypass DAC equalizer - NOT default
+      0
+    };
+    if (enabled)
+    {
+      self->In_I2C.bitOn(m5ioe1_i2c_addr, 0x05, 0b00000010, 100000); // Enable Audio Power (M5IOE1_G3)
+      self->delay(5);
+      in_i2c_bulk_write(es8311_i2c_addr0, enabled_bulk_data, 100000, 3);
+      self->In_I2C.bitOn(m5ioe1_i2c_addr, 0x06, 0b00000010, 100000); // Enable PA (M5IOE1_G10)
+    }
+    else
+    {
+      self->In_I2C.bitOff(m5ioe1_i2c_addr, 0x06, 0b00000010, 100000); // Disable PA (M5IOE1_G10)
+      self->In_I2C.bitOff(m5ioe1_i2c_addr, 0x05, 0b00000010, 100000); // Disable Audio Power (M5IOE1_G3)
     }
 #endif
     return true;
@@ -957,6 +990,41 @@ static constexpr const uint8_t _pin_table_mbus[][31] = {
         }
       }
     }
+#endif
+    return true;
+  }
+
+
+  bool M5Unified::_microphone_enabled_cb_stopwatch(void* args, bool enabled)
+  {
+#if defined (CONFIG_IDF_TARGET_ESP32S3)
+    auto self = (M5Unified*)args;
+
+    static constexpr const uint8_t enabled_bulk_data[] = {
+      2, 0x00, 0x80,  // 0x00 RESET/  CSM POWER ON
+      2, 0x01, 0xBA,  // 0x01 CLOCK_MANAGER/ MCLK=BCLK
+      2, 0x02, 0x18,  // 0x02 CLOCK_MANAGER/ MULT_PRE=3
+      2, 0x0D, 0x01,  // 0x0D SYSTEM/ Power up analog circuitry
+      2, 0x0E, 0x02,  // 0x0E SYSTEM/ : Enable analog PGA, enable ADC modulator
+      2, 0x14, 0x10,  // ES8311_ADC_REG14 : select Mic1p-Mic1n / PGA GAIN (minimum)
+      2, 0x17, 0xFF,  // ES8311_ADC_REG17 : ADC_VOLUME (MAXGAIN) // (0xBF == ± 0 dB )
+      2, 0x1C, 0x6A,  // ES8311_ADC_REG1C : ADC Equalizer bypass, cancel DC offset in digital domain
+      0
+    };
+    static constexpr const uint8_t disabled_bulk_data[] = {
+      2, 0x0D, 0xFC,  // 0x0D SYSTEM/ Power down analog circuitry
+      2, 0x0E, 0x6A,  // 0x0E SYSTEM
+      2, 0x00, 0x00,  // 0x00 RESET/  CSM POWER DOWN
+      0
+    };
+    if (enabled)
+    {
+      self->In_I2C.bitOn(m5ioe1_i2c_addr, 0x05, 0b00000010, 100000); // Enable Audio Power (M5IOE1_G3)
+      self->delay(5);
+    }
+    m5gfx::i2c::i2c_temporary_switcher_t backup_i2c_setting(1, GPIO_NUM_47, GPIO_NUM_48);
+    in_i2c_bulk_write(es8311_i2c_addr0, enabled ? enabled_bulk_data : disabled_bulk_data, 100000, 3);
+    backup_i2c_setting.restore();
 #endif
     return true;
   }
@@ -1955,7 +2023,19 @@ static constexpr const uint8_t _pin_table_mbus[][31] = {
           mic_cfg.input_channel = input_channel_t::input_only_left;
           mic_enable_cb = _microphone_enabled_cb_papercolor;
         }
-        break;
+      break;
+
+      case board_t::board_M5StopWatch:
+        if (cfg.internal_mic)
+        {
+          mic_cfg.pin_mck = GPIO_NUM_18;
+          mic_cfg.pin_bck = GPIO_NUM_17;
+          mic_cfg.pin_ws = GPIO_NUM_15;
+          mic_cfg.pin_data_in = GPIO_NUM_16;
+          mic_cfg.i2s_port = I2S_NUM_1;
+          mic_enable_cb = _microphone_enabled_cb_stopwatch;
+        }
+      break;
 
       case board_t::board_M5AtomS3U:
         if (cfg.internal_mic)
@@ -2258,6 +2338,24 @@ static constexpr const uint8_t _pin_table_mbus[][31] = {
           spk_enable_cb = _speaker_enabled_cb_papercolor;
         }
         break;
+
+      case board_t::board_M5StopWatch:
+        if (cfg.internal_spk)
+        {
+          spk_cfg.pin_mck = GPIO_NUM_18;
+          spk_cfg.pin_bck = GPIO_NUM_17;
+          spk_cfg.pin_ws = GPIO_NUM_15;
+          spk_cfg.pin_data_out = GPIO_NUM_21;
+          spk_cfg.i2s_port = I2S_NUM_0;
+          spk_cfg.magnification = 1;
+          spk_cfg.sample_rate = 44100;
+          spk_cfg.stereo = true;
+          spk_cfg.buzzer = false;
+          spk_cfg.use_dac = false;
+          spk_cfg.dac_zero_level = 0;
+          spk_enable_cb = _speaker_enabled_cb_stopwatch;
+        }
+      break;
 
       case board_t::board_M5Cardputer:
       case board_t::board_M5CardputerADV:
