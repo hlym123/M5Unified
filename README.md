@@ -1,6 +1,11 @@
 # M5Unified
 ### Arduino / ESP-IDF Library for M5Stack Series
 
+## Documentation
+
+See the [documentation index](docs/README.md), [IMU reference](docs/api/imu.md),
+and [CoreS3 axis diagrams](docs/devices/cores3-imu.md).
+
 ## Usage
 This library provides access to the built-in hardware of M5Stack controllers.  Library functionality is available through the `m5` namespace, and includes the following:
 
