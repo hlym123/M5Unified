@@ -4,7 +4,8 @@
 ## Documentation
 
 See the [documentation index](docs/README.md), [IMU reference](docs/api/imu.md),
-and [CoreS3 axis diagrams](docs/devices/cores3-imu.md).
+[host sensor reference](docs/devices/imu-orientation.md), and
+[CoreS3 built-in sensors](docs/devices/cores3-imu.md).
 
 ## Usage
 This library provides access to the built-in hardware of M5Stack controllers.  Library functionality is available through the `m5` namespace, and includes the following:
@@ -36,6 +37,7 @@ In the Arduino IDE, once the M5Unified library is installed through Library Mana
 - **Clock:** An example of connecting to an Internet time server over WiFi and setting the built-in clock is in [RTC](examples/Basic/Rtc/Rtc.ino).
 - **Microphone:** An example that records a short clip and plays it back through the speaker is in [Microphone](examples/Basic/Microphone/Microphone.ino).
 - **IMU:** An example demonstrating the accelerometer / gyro / magnetometer is in [IMU](examples/Basic/Imu/Imu.ino)
+- **IMU axis check:** Use [ImuAxisTest](examples/Basic/ImuAxisTest) to inspect live sensor axes and freshness without changing calibration or writing NVS.
 - **Advanced** examples include playing audio over Bluetooth and streaming and decoding MP3 audio, and are in the [Advanced folder](examples/Advanced).
 
 ##### M5Stack hardware functionality supported by the ESP32 ecosystem

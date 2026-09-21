@@ -70,7 +70,8 @@ The axis-test example preserves loaded offsets and never saves or clears them.
 
 ## Reference and examples
 
-- [CoreS3: accel, gyro and mag](../devices/cores3-imu.md)
+- [IMU host reference](../devices/imu-orientation.md): product photographs, built-in sensor availability and official hardware sources.
+- [CoreS3 built-in sensors](../devices/cores3-imu.md): BMI270 / BMM150 availability and CoreS3 variant differences.
 - [Axis verification procedure](../guides/imu-axis-test.md)
 - [ImuAxisTest](../../examples/Basic/ImuAxisTest): current output and per-sensor freshness.
 - [Existing Imu example](../../examples/Basic/Imu): includes calibration and NVS writes.

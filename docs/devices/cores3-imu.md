@@ -1,41 +1,30 @@
-# CoreS3 IMU directions
+# [CoreS3](https://docs.m5stack.com/zh_CN/core/CoreS3)
 
-CoreS3 has a BMI270 accelerometer/gyroscope and a BMM150 magnetometer.
-Face the display with the camera edge at the bottom. X points to the product's
-right, Y toward its top, and Z outward from the display face.
+<img src="../assets/imu/hosts/generated/cores3-imu-sample.svg" alt="CoreS3 ACCEL and MAG axes with positive GYRO rotation about each axis" width="1000">
 
-The diagrams define the target product frame for verification. They do not
-certify the current driver output or change its mappings.
+- **ACCEL: Yes — BMI270** (three-axis accelerometer).
+- **GYRO: Yes — BMI270** (three-axis gyroscope).
+- **MAG: Yes — BMM150** (three-axis magnetometer).
 
-## Acceleration
+The CoreS3 reference image retains its original axis intersection and straight
+arrows, with curved GYRO arrows added. Face the display with the camera edge at the bottom: +X points
+right, +Y toward the top edge, and +Z out of the display face.
 
-![CoreS3 acceleration axes and six-face static check](../assets/imu/cores3-accel.svg)
+Straight arrows show the shared ACCEL/MAG directions. Each curved GYRO arrow
+wraps around its corresponding straight axis in the perpendicular plane.
+Positive rotation follows the
+right-hand rule: viewed from the positive end toward O, it is counterclockwise.
 
-Hold each positive axis vertically upward, then downward. Check approximately
-+1 g and -1 g on that axis; the other two should be near zero when aligned.
+MAG here uses the M5Unified output frame with no application axis override.
+The [CoreS3 handling in IMU_Class](../../src/utility/IMU_Class.inl) inverts MAG Y/Z
+when the BMI270 is detected at 0x69. This is not a diagram of the raw BMM150 package axes.
+The annotation has been checked against the documentation and implementation;
+the physical direction mapping has not been tested on a device in this documentation change.
 
-## Angular velocity
+CoreS3-Lite also documents BMI270 + BMM150. CoreS3-SE omits IMU and MAG;
+see the [CoreS3-SE comparison](https://docs.m5stack.com/zh_CN/core/CoreS3-SE).
 
-![CoreS3 gyro axes and right-handed positive rotation](../assets/imu/cores3-gyro.svg)
+For live readings, use [ImuAxisTest](../../examples/Basic/ImuAxisTest).
+Hardware availability and the direction of returned axes are separate checks.
 
-Rotate around each axis in both directions. A positive rotation is counterclockwise
-when looking from the positive end of that axis toward the origin. Test one axis
-at a time; a still device should have angular velocity near zero.
-
-## Magnetic field
-
-![CoreS3 magnetic axes and positive magnetic-field components](../assets/imu/cores3-mag.svg)
-
-Use a stable reference field to check component signs. Do not infer a compass
-heading from one component. Magnets in a base or attachment and nearby metal
-can disturb the reading; arrange the test environment before judging a mapping.
-
-## Verification checklist
-
-- [ ] Confirm the fixed housing pose.
-- [ ] Accel: test all six static orientations.
-- [ ] Gyro: test positive and negative rotation around X, Y and Z.
-- [ ] Mag: check each axis against a stable reference field.
-- [ ] Record library versions, hardware revision and any mismatches.
-
-[Test procedure](../guides/imu-axis-test.md) · [IMU API](../api/imu.md) · [Device index](README.md)
+[Host sensor reference](imu-orientation.md) · [IMU API](../api/imu.md) · [Device index](README.md)

@@ -1,10 +1,7 @@
 # Device guides
 
-- [CoreS3 IMU directions](cores3-imu.md): accel, gyro and mag reference and checklist.
+- [IMU host reference](imu-orientation.md): product photographs, built-in ACCEL/GYRO/MAG availability, sensor chips and official sources, grouped by the M5GFX device list and mapped to board IDs; kit and revision differences stay within each host.
+- [CoreS3 built-in sensors](cores3-imu.md): BMI270 and BMM150, with CoreS3-Lite / SE differences.
 - [Supported devices](../../README.md): library device coverage.
-
-Additional built-in IMU device direction guides will follow the CoreS3 reference
-format after its review. A shared chipset alone does not establish a shared
-housing orientation or sensor capability.
 
 [Documentation home](../README.md)

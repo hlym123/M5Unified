@@ -8,6 +8,20 @@ static uint32_t lastReportMs = 0;
 static const char* names[] = {"accel", "gyro", "mag"};
 static const char* units[] = {"g", "deg/s", "mG"};
 
+static const char* imuTypeName(m5::imu_t type)
+{
+  switch (type)
+  {
+  case m5::imu_sh200q: return "SH200Q";
+  case m5::imu_mpu6050: return "MPU6050";
+  case m5::imu_mpu6886: return "MPU6886";
+  case m5::imu_mpu9250: return "MPU9250";
+  case m5::imu_bmi270: return "BMI270";
+  case m5::imu_unknown: return "unknown";
+  default: return "none";
+  }
+}
+
 static const char* statusFor(int sensor, uint32_t now)
 {
   if (!(observedMask & (1u << sensor))) return "NO DATA";
@@ -23,9 +37,14 @@ static void report(uint32_t now)
     M5.Display.fillScreen(TFT_BLACK);
     M5.Display.setCursor(0, 0);
     M5.Display.println("IMU axis test");
+    M5.Display.printf("board=%u imu=%s\n", static_cast<unsigned>(M5.getBoard()),
+                      imuTypeName(M5.Imu.getType()));
+    M5.Display.printf("mask=0x%02x  115200 baud\n", observedMask);
     M5.Display.println("      X       Y       Z");
   }
   Serial.printf("ms=%lu observed_mask=0x%02x\n", static_cast<unsigned long>(now), observedMask);
+  Serial.printf("board=%u imu=%s enabled=%u\n", static_cast<unsigned>(M5.getBoard()),
+                imuTypeName(M5.Imu.getType()), M5.Imu.isEnabled());
   for (int i = 0; i < 3; ++i)
   {
     const char* status = statusFor(i, now);
@@ -60,9 +79,14 @@ void setup()
                 static_cast<unsigned>(M5.Imu.getType()), M5.Imu.isEnabled());
   Serial.println("No axis remap or NVS writes. Loaded calibration offsets remain in use.");
   Serial.println("NO DATA = unavailable or no sample yet; STALE = no update for 500 ms.");
-  Serial.println("CoreS3 expects accel + gyro + mag. Compare against the axis reference.");
+  Serial.println("Use the host orientation reference for expected sensors and directions.");
   if (M5.Display.width() > 0 && M5.Display.height() > 0)
   {
+    // Prefer a readable landscape view when the host display is portrait.
+    if (M5.Display.width() < M5.Display.height())
+    {
+      M5.Display.setRotation(M5.Display.getRotation() ^ 1);
+    }
     M5.Display.setFont(&fonts::Font0);
     M5.Display.setTextSize(M5.Display.width() >= 300 && M5.Display.height() >= 160 ? 2 : 1);
     M5.Display.setTextColor(TFT_WHITE, TFT_BLACK);

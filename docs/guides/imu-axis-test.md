@@ -1,8 +1,7 @@
 # Verify IMU axes
 
 Run [ImuAxisTest](../../examples/Basic/ImuAxisTest) with serial output at 115200 baud.
-Start with the [CoreS3 reference](../devices/cores3-imu.md). Keep the device pose
-independent of the displayed text orientation.
+Start with the [host sensor reference](../devices/imu-orientation.md), then use the [CoreS3 axis diagram](../devices/cores3-imu.md) when testing CoreS3. Keep the device pose independent of the displayed text orientation.
 
 ## Before testing
 
@@ -13,8 +12,8 @@ automatic calibration, leaves axis ordering unchanged and does not write NVS.
 The observed sensor mask records channels that have actually returned samples.
 `NO DATA` means unavailable or not sampled yet; it is not a definitive hardware
 capability query. `STALE` means the last sample is more than 500 ms old. Missing
-and stale channels show dashes, not invented zeros. CoreS3 is expected to provide
-all three channels. Stop interpretation if an expected channel has no valid samples.
+and stale channels show dashes, not invented zeros. Use the host reference to determine
+which channels are expected. Stop interpretation if an expected channel has no valid samples.
 
 ## Accel: six static poses
 

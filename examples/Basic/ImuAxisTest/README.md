@@ -10,8 +10,9 @@ until samples have been observed; data older than 500 ms is marked STALE.
 The sketch does not remap axes, calibrate automatically, clear offsets or write
 NVS. Existing offsets loaded during initialization remain active. Only internal
 IMU detection is enabled. The displayed observed mask is based on received samples,
-not a complete hardware inventory. CoreS3 should report all three sensors.
+not a complete hardware inventory. Use the host reference to determine expected sensors.
 
-Use [CoreS3 diagrams](../../../docs/devices/cores3-imu.md) and the
-[test procedure](../../../docs/guides/imu-axis-test.md). Keep the housing pose
-fixed and do not assume that changing display rotation changes IMU axes.
+Use the [host sensor reference](../../../docs/devices/imu-orientation.md),
+the [CoreS3 axis diagram](../../../docs/devices/cores3-imu.md) where applicable, and
+the [test procedure](../../../docs/guides/imu-axis-test.md). Keep the housing
+pose fixed and do not assume that changing display rotation changes IMU axes.
