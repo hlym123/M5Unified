@@ -43,29 +43,31 @@ static void drawValues(uint32_t now)
   const int ox = buffered ? 0 : viewX;
   const int oy = buffered ? 0 : viewY;
   const bool large = viewWidth >= 300 && viewHeight >= 200;
-  const int textSize = large ? 2 : 1;
-  const int rowsTop = large ? 62 : 38;
+  // Use native font sizes: scaling Font0 enlarges its coarse bitmap pixels.
+  const lgfx::IFont* valueFont = large ? &fonts::DejaVu18 : &fonts::DejaVu9;
+  const lgfx::IFont* labelFont = large ? &fonts::DejaVu12 : &fonts::DejaVu9;
+  const int rowsTop = large ? 68 : 42;
   const int rowHeight = (viewHeight - rowsTop - 14) / 3;
   const int columnWidth = (viewWidth - 12) / 3;
   display.startWrite();
   display.fillRect(ox, oy, viewWidth, viewHeight, TFT_BLACK);
-  display.setFont(&fonts::Font0);
+  display.setFont(valueFont);
   display.setTextWrap(false);
-  display.setTextSize(textSize);
+  display.setTextSize(1);
   display.setTextColor(TFT_WHITE);
   display.setCursor(ox + 6, oy + 4);
   display.print("IMU / MAG");
-  display.setTextSize(1);
-  display.setCursor(ox + 6, oy + (large ? 25 : 16));
+  display.setFont(labelFont);
+  display.setCursor(ox + 6, oy + (large ? 27 : 17));
   display.print(M5.Imu.isEnabled() ? imuTypeName(M5.Imu.getType()) : "IMU NOT DETECTED");
 
   for (int axis = 0; axis < 3; ++axis)
   {
-    display.setTextSize(textSize);
+    display.setFont(valueFont);
     display.setTextColor(axisColors[axis]);
     const char* label = axis == 0 ? "X" : axis == 1 ? "Y" : "Z";
     const int centre = ox + 6 + columnWidth * axis + columnWidth / 2;
-    display.drawString(label, centre - display.textWidth(label) / 2, oy + (large ? 42 : 27));
+    display.drawString(label, centre - display.textWidth(label) / 2, oy + (large ? 44 : 29));
   }
 
   for (int sensor = 0; sensor < 3; ++sensor)
@@ -75,10 +77,10 @@ static void drawValues(uint32_t now)
     const bool valid = status[0] == 'O';
     display.fillRoundRect(ox + 3, y, viewWidth - 6, rowHeight - 3, 3, 0x14202Cu);
     display.setTextColor(TFT_WHITE);
-    display.setTextSize(textSize);
+    display.setFont(labelFont);
     display.setCursor(ox + 8, y + 3);
     display.printf(large ? "%s (%s)" : "%s %s", names[sensor], units[sensor]);
-    display.setTextSize(1);
+    display.setFont(&fonts::DejaVu9);
     display.setTextColor(valid ? 0xA9C7B4u : 0xFFCC66u);
     display.drawString(status, ox + viewWidth - 8 - display.textWidth(status), y + 4);
 
@@ -87,17 +89,18 @@ static void drawValues(uint32_t now)
       char value[32];
       if (valid) snprintf(value, sizeof(value), sensor == 0 ? "%+.2f" : "%+.1f", sample.sensor[sensor].value[axis]);
       else snprintf(value, sizeof(value), "--");
-      display.setTextSize(textSize);
+      display.setFont(valueFont);
       // Keep wide MAG readings inside their column on compact screens.
-      if (display.textWidth(value) > columnWidth - 4) display.setTextSize(1);
+      if (display.textWidth(value) > columnWidth - 4) display.setFont(labelFont);
       if (valid && display.textWidth(value) > columnWidth - 4)
         snprintf(value, sizeof(value), "%+.0f", sample.sensor[sensor].value[axis]);
+      if (display.textWidth(value) > columnWidth - 2) display.setFont(&fonts::Font0);
       display.setTextColor(valid ? axisColors[axis] : 0x8493A2u);
       const int centre = ox + 6 + columnWidth * axis + columnWidth / 2;
-      display.drawString(value, centre - display.textWidth(value) / 2, y + (large ? 25 : 13));
+      display.drawString(value, centre - display.textWidth(value) / 2, y + (large ? 23 : 12));
     }
   }
-  display.setTextSize(1);
+  display.setFont(&fonts::DejaVu9);
   display.setTextColor(0x9CAABBu);
   display.setCursor(ox + 6, oy + viewHeight - 10);
   display.print(viewWidth >= 200 ? "LIVE 10 Hz | Serial 115200" : "LIVE | 115200");
