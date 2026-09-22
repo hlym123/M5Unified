@@ -38,6 +38,8 @@ Keep attachments with magnets and magnetic tools away from the setup.
 
 ## Record results
 
+See the [device test log](imu-test-results.md) for recorded device results.
+
 For each sensor, record **pass**, **mismatch**, **unavailable** or **not tested**,
 with the pose/motion, component values, photos and proposed correction if needed.
 Do not mark a checkbox complete based on compilation or a reference picture.
