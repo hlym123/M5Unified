@@ -39,4 +39,9 @@ recorded separately so a data-refresh check does not imply a full axis test.
 - Example captured values (physical pose not recorded):
   ACCEL `(-0.9812, +0.0044, +0.2446)` g;
   GYRO `(-0.4272, +0.0000, +0.0000)` deg/s.
+- Display follow-up: removed the automatic landscape rotation after user feedback.
+  The updated example keeps the default orientation and gives X/Y/Z separate
+  lines in each sensor panel. Native rendering checked at 135 x 240.
+- Reflashed the portrait layout and captured 8 seconds of output: confirmed
+  `rotation=0 width=135 height=240`, ACCEL/GYRO `OK` and MAG `NO DATA`.
 - Screen readability and physical axis-direction confirmation: pending user test.

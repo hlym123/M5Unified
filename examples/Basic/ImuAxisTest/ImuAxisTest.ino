@@ -43,10 +43,12 @@ static void drawValues(uint32_t now)
   const int ox = buffered ? 0 : viewX;
   const int oy = buffered ? 0 : viewY;
   const bool large = viewWidth >= 300 && viewHeight >= 200;
+  const bool portrait = viewHeight > viewWidth && viewHeight >= 220;
   // Use native font sizes: scaling Font0 enlarges its coarse bitmap pixels.
-  const lgfx::IFont* valueFont = large ? &fonts::DejaVu18 : &fonts::DejaVu9;
+  const lgfx::IFont* valueFont = large ? &fonts::DejaVu18
+                                    : portrait ? &fonts::DejaVu12 : &fonts::DejaVu9;
   const lgfx::IFont* labelFont = large ? &fonts::DejaVu12 : &fonts::DejaVu9;
-  const int rowsTop = large ? 68 : 42;
+  const int rowsTop = large ? 68 : portrait ? 34 : 42;
   const int rowHeight = (viewHeight - rowsTop - 14) / 3;
   const int columnWidth = (viewWidth - 12) / 3;
   display.startWrite();
@@ -58,10 +60,10 @@ static void drawValues(uint32_t now)
   display.setCursor(ox + 6, oy + 4);
   display.print("IMU / MAG");
   display.setFont(labelFont);
-  display.setCursor(ox + 6, oy + (large ? 27 : 17));
+  display.setCursor(ox + 6, oy + (large ? 27 : portrait ? 20 : 17));
   display.print(M5.Imu.isEnabled() ? imuTypeName(M5.Imu.getType()) : "IMU NOT DETECTED");
 
-  for (int axis = 0; axis < 3; ++axis)
+  for (int axis = 0; !portrait && axis < 3; ++axis)
   {
     display.setFont(valueFont);
     display.setTextColor(axisColors[axis]);
@@ -90,14 +92,26 @@ static void drawValues(uint32_t now)
       if (valid) snprintf(value, sizeof(value), sensor == 0 ? "%+.2f" : "%+.1f", sample.sensor[sensor].value[axis]);
       else snprintf(value, sizeof(value), "--");
       display.setFont(valueFont);
-      // Keep wide MAG readings inside their column on compact screens.
-      if (display.textWidth(value) > columnWidth - 4) display.setFont(labelFont);
-      if (valid && display.textWidth(value) > columnWidth - 4)
+      // Portrait screens put each axis on its own line, with room for signed values.
+      const int valueWidth = portrait ? viewWidth - 36 : columnWidth - 4;
+      if (display.textWidth(value) > valueWidth) display.setFont(labelFont);
+      if (valid && display.textWidth(value) > valueWidth)
         snprintf(value, sizeof(value), "%+.0f", sample.sensor[sensor].value[axis]);
-      if (display.textWidth(value) > columnWidth - 2) display.setFont(&fonts::Font0);
+      if (display.textWidth(value) > valueWidth + 2) display.setFont(&fonts::Font0);
       display.setTextColor(valid ? axisColors[axis] : 0x8493A2u);
-      const int centre = ox + 6 + columnWidth * axis + columnWidth / 2;
-      display.drawString(value, centre - display.textWidth(value) / 2, y + (large ? 23 : 12));
+      if (portrait)
+      {
+        const int lineY = y + 17 + axis * ((rowHeight - 20) / 3);
+        display.drawString(value, ox + viewWidth - 10 - display.textWidth(value), lineY);
+        display.setFont(valueFont);
+        display.setTextColor(axisColors[axis]);
+        display.drawString(axis == 0 ? "X" : axis == 1 ? "Y" : "Z", ox + 10, lineY);
+      }
+      else
+      {
+        const int centre = ox + 6 + columnWidth * axis + columnWidth / 2;
+        display.drawString(value, centre - display.textWidth(value) / 2, y + (large ? 23 : 12));
+      }
     }
   }
   display.setFont(&fonts::DejaVu9);
@@ -146,8 +160,10 @@ void setup()
 
   if (M5.Display.width() > 0 && M5.Display.height() > 0)
   {
-    if (M5.Display.width() < M5.Display.height())
-      M5.Display.setRotation(M5.Display.getRotation() ^ 1);
+    // Keep the default device orientation for comparison with the host photographs.
+    Serial.printf("Display: rotation=%u width=%d height=%d\n",
+                  static_cast<unsigned>(M5.Display.getRotation()),
+                  M5.Display.width(), M5.Display.height());
     viewWidth = M5.Display.width() > 320 ? 320 : M5.Display.width();
     viewHeight = M5.Display.height() > 240 ? 240 : M5.Display.height();
     M5.Display.fillScreen(TFT_BLACK);

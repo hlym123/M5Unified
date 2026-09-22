@@ -9,7 +9,10 @@ The screen shows all nine signed readings in three fixed panels at 10 Hz:
 - **GYRO (deg/s):** X, Y, Z angular velocity.
 - **MAG (mG):** X, Y, Z magnetic field, using M5Unified's conversion.
 
-Columns use **X = red, Y = green, Z = blue** and also show axis names.
+Axes use **X = red, Y = green, Z = blue** and also show axis names.
+The display keeps the device default orientation for comparison with the host
+photographs. Tall portrait screens such as StickS3 show X/Y/Z on separate
+lines within each sensor panel; wider screens show three columns.
 The sketch uses a sprite to update the display without clearing it between
 frames. It falls back to direct drawing if sprite memory is unavailable.
 Compact screens use smaller text and reduce numeric precision when necessary.
@@ -34,7 +37,7 @@ To check directions on CoreS3:
 The sketch displays the default `M5.Imu` output frame. It does not remap axes,
 calibrate automatically, clear offsets or save to NVS. Existing offsets loaded
 at initialization remain active. Only internal IMU detection is enabled.
-Display rotation changes the text layout, not the sensor axes.
+The example does not rotate the display or the sensor axes.
 
 Use the [host sensor reference](../../../docs/devices/imu-orientation.md) to check
 which sensors your model contains, and the [test procedure](../../../docs/guides/imu-axis-test.md)
