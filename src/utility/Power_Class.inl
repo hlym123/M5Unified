@@ -1052,6 +1052,12 @@ namespace m5
     if (_pmic == pmic_t::pmic_m5pm1)
     {
       M5pm1.begin();
+
+      // StampS3Bat camera power is supplied by the PM1 3.3V DCDC rail.
+      if (M5.getBoard() == board_t::board_M5StampS3Bat)
+      {
+        M5pm1.setDCDCOutput(true);
+      }
     }
 #endif
 

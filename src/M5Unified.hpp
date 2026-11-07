@@ -65,6 +65,7 @@ namespace m5
 #include "utility/Log_Class.hpp"
 #include "utility/LED_Class.hpp"
 #include "utility/IMU_Class.hpp"
+#include "utility/LTR553_Class.hpp"
 #include "utility/IOExpander_Base.hpp"
 
 #include <memory>
@@ -151,6 +152,9 @@ namespace m5
       /// use the speaker.
       bool internal_spk  = true;
 
+      /// use als
+      bool internal_als  = false;
+
       /// use Unit Accel & Gyro.
       bool external_imu  = false;
 
@@ -222,6 +226,7 @@ namespace m5
     Power_Class Power;
     RTC_Class Rtc;
     Touch_Class Touch;
+    LTR553_Class Als;
     Speaker_Class Speaker;
     Mic_Class Mic;
     LED_Class Led;
@@ -807,6 +812,8 @@ namespace m5
     static bool _speaker_enabled_cb_atom_echos3r(void* args, bool enabled);
     static bool _speaker_enabled_cb_atomic_echo(void* args, bool enabled);
     static bool _speaker_enabled_cb_hat_spk(void* args, bool enabled);
+    static void _speaker_tone_cb_corematrix(void* args, float frequency, uint8_t volume);
+    static void _speaker_tone_cb_toughc5(void* args, float frequency, uint8_t volume);
     static bool _microphone_enabled_cb_cores3(void* args, bool enabled);
     static bool _microphone_enabled_cb_stickc(void* args, bool enabled);
     static bool _microphone_enabled_cb_sticks3(void* args, bool enabled);

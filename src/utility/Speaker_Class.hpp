@@ -97,7 +97,11 @@ namespace m5
     bool isEnabled(void) const
     {
 #if defined (ESP_PLATFORM)
+#if defined (CONFIG_IDF_TARGET_ESP32C61) || defined (CONFIG_IDF_TARGET_ESP32C5)
+      return _cfg.pin_data_out >= 0 || _cb_set_tone != nullptr;
+#else
       return _cfg.pin_data_out >= 0;
+#endif
 #else
       return true;
 #endif
@@ -110,7 +114,14 @@ namespace m5
     /// now in playing or not.
     /// @param channel virtual channel number. (0~7), (default = automatically selected)
     /// @return 0=not playing / 1=playing (There's room in the queue) / 2=playing (There's no room in the queue.)
-    size_t isPlaying(uint8_t channel) const volatile { return (channel < sound_channel_max) ? _slot_occupied(_ch_info[channel].wavinfo[0]) + _slot_occupied(_ch_info[channel].wavinfo[1]) : 0; }
+    size_t isPlaying(uint8_t channel) const volatile
+    {
+      if (channel >= sound_channel_max) { return 0; }
+#if defined (CONFIG_IDF_TARGET_ESP32C61) || defined (CONFIG_IDF_TARGET_ESP32C5)
+      if (_cb_set_tone) { return (_play_channel_bits.load() >> channel) & 1; }
+#endif
+      return _slot_occupied(_ch_info[channel].wavinfo[0]) + _slot_occupied(_ch_info[channel].wavinfo[1]);
+    }
 
     /// Get the number of channels that are playing.
     /// @return number of channels that are playing.
@@ -279,6 +290,12 @@ namespace m5
     /// Called under the request lock from begin()/end(): it must not call
     /// play*(), stop(), begin() or end() itself (deadlock).
     void setCallback(void* args, bool(*func)(void*, bool)) { _cb_set_enabled = func; _cb_set_enabled_args = args; }
+#if defined (CONFIG_IDF_TARGET_ESP32C61) || defined (CONFIG_IDF_TARGET_ESP32C5)
+    // A board-provided PWM tone backend. It supports tone(), but not PCM playback.
+    void setToneCallback(void* args, void(*func)(void*, float, uint8_t)) { _cb_set_tone = func; _cb_set_tone_args = args; }
+#else
+    void setToneCallback(void*, void(*)(void*, float, uint8_t)) {}
+#endif
 
     struct wav_info_t
     {
@@ -347,12 +364,18 @@ namespace m5
     channel_info_t _ch_info[sound_channel_max];
 
     static void spk_task(void* args);
+#if defined (CONFIG_IDF_TARGET_ESP32C61) || defined (CONFIG_IDF_TARGET_ESP32C5)
+    static void external_tone_task(void* args);
+#endif
 
     esp_err_t _setup_i2s(void);
     bool _in_task(void) const;
     void _lock_req(void);
     bool _begin_raw(void);
     void _end_locked(void);
+#if defined (CONFIG_IDF_TARGET_ESP32C61) || defined (CONFIG_IDF_TARGET_ESP32C5)
+    void _lock_external_tone(void);
+#endif
     bool _play_raw(const void* wav, size_t array_len, bool flg_16bit, bool flg_signed, float sample_rate, bool flg_stereo, uint32_t repeat_count, int channel, bool stop_current_sound, bool no_clear_index);
     bool _set_next_wav(size_t ch, const wav_info_t& wav);
     int _set_next_wav_locked(size_t ch, const wav_info_t& wav);
@@ -364,6 +387,16 @@ namespace m5
     void* _cb_set_enabled_args = nullptr;
     void (*_cb_buffer_release)(void* args, const void* data, uint8_t channel) = nullptr;
     void* _cb_buffer_release_args = nullptr;
+#if defined (CONFIG_IDF_TARGET_ESP32C61) || defined (CONFIG_IDF_TARGET_ESP32C5)
+    void (*_cb_set_tone)(void* args, float frequency, uint8_t volume) = nullptr;
+    void* _cb_set_tone_args = nullptr;
+    std::atomic_flag _external_tone_lock = ATOMIC_FLAG_INIT;
+    std::atomic<uint32_t> _external_tone_generation { 0 };
+    uint32_t _external_tone_frequency = 0;
+    uint32_t _external_tone_duration_ms = 0;
+    uint8_t _external_tone_volume = 0;
+    bool _external_tone_stopping = true;
+#endif
 
     std::atomic<bool> _task_running { false };
     std::atomic<uint16_t> _play_channel_bits = { 0 };

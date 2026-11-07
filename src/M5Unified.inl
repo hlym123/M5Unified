@@ -11,6 +11,8 @@
 #include "utility/PI4IOE5V6408_Class.hpp"
 #include "utility/M5IOE1_Class.hpp"
 
+#include <math.h>
+
 #if !defined (M5UNIFIED_PC_BUILD)
 #include <soc/soc.h>
 #include <soc/efuse_reg.h>
@@ -129,7 +131,7 @@ static constexpr const uint8_t _pin_table_i2c_ex_in[][5] = {
 #elif defined (CONFIG_IDF_TARGET_ESP32C3)
 { board_t::board_unknown      , 255        ,255         , GPIO_NUM_0 ,GPIO_NUM_1  },
 #elif defined (CONFIG_IDF_TARGET_ESP32C6)
-{ board_t::board_M5UnitC6L     ,GPIO_NUM_8 ,GPIO_NUM_10 , 255        ,255         },
+{ board_t::board_M5UnitC6L     , 255       , 255        , 255        ,255         },
 { board_t::board_ArduinoNessoN1,GPIO_NUM_8 ,GPIO_NUM_10 , GPIO_NUM_8 ,GPIO_NUM_10 },
 { board_t::board_M5NanoC6     , 255        ,255         , GPIO_NUM_1 ,GPIO_NUM_2  },
 { board_t::board_unknown      , 255        ,255         , 255        ,255         },
@@ -177,7 +179,7 @@ static constexpr const uint8_t _pin_table_port_bc[][5] = {
 { board_t::board_M5ChainCaptain,GPIO_NUM_17,GPIO_NUM_18, 255        ,255         },
 #elif defined (CONFIG_IDF_TARGET_ESP32C3)
 #elif defined (CONFIG_IDF_TARGET_ESP32C6)
-{ board_t::board_M5UnitC6L     ,GPIO_NUM_4 ,GPIO_NUM_5 , GPIO_NUM_4 ,GPIO_NUM_5  },
+{ board_t::board_M5UnitC6L     ,GPIO_NUM_4 ,GPIO_NUM_5 , 255        ,255         },
 { board_t::board_ArduinoNessoN1,GPIO_NUM_4 ,GPIO_NUM_5 , GPIO_NUM_4 ,GPIO_NUM_5  },
 #elif defined (CONFIG_IDF_TARGET_ESP32C61)
 #elif defined (CONFIG_IDF_TARGET_ESP32H2)
@@ -607,6 +609,59 @@ static constexpr const uint8_t _pin_table_mbus[][31] = {
     }
 #endif
     return true;
+  }
+
+  void M5Unified::_speaker_tone_cb_corematrix(void* args, float frequency, uint8_t volume)
+  {
+#if defined (CONFIG_IDF_TARGET_ESP32C61)
+    auto self = (M5Unified*)args;
+    auto& ioe1 = static_cast<M5IOE1_Class&>(self->getIOExpander(0));
+    if (frequency > 0 && volume)
+    {
+      ioe1.digitalWrite(M5IOE1_Class::gpio2, false);
+      ioe1.setHighImpedance(M5IOE1_Class::gpio2, false);
+      ioe1.setDirection(M5IOE1_Class::gpio2, true);
+      ioe1.setHighImpedance(M5IOE1_Class::gpio11, false);
+      ioe1.setDirection(M5IOE1_Class::gpio11, true);
+      ioe1.setPwmDuty12bit(M5IOE1_Class::pwm_ch3, 0, pwm_polarity_t::normal, false);
+      ioe1.setPwmFrequency(lroundf(frequency));
+      ioe1.setPwmDuty12bit(M5IOE1_Class::pwm_ch3, ((uint16_t)volume * 2048 + 127) / 255);
+      ioe1.digitalWrite(M5IOE1_Class::gpio2, true);
+    }
+    else
+    {
+      ioe1.digitalWrite(M5IOE1_Class::gpio2, false);
+      ioe1.setPwmDuty12bit(M5IOE1_Class::pwm_ch3, 0, pwm_polarity_t::normal, false);
+    }
+#else
+    (void)args;
+    (void)frequency;
+    (void)volume;
+#endif
+  }
+
+  void M5Unified::_speaker_tone_cb_toughc5(void* args, float frequency, uint8_t volume)
+  {
+#if defined (CONFIG_IDF_TARGET_ESP32C5)
+    auto self = (M5Unified*)args;
+    auto& pm1 = self->Power.M5pm1;
+    if (frequency > 0 && volume)
+    {
+      pm1.setGPIOMode(M5PM1_Class::gpio4, M5PM1_Class::output);
+      pm1.setGPIOFunction(M5PM1_Class::gpio4, M5PM1_Class::special);
+      pm1.setPwmDuty12bit(M5PM1_Class::pwm_ch1, 0, pwm_polarity_t::normal, false);
+      pm1.setPwmFrequency(lroundf(frequency));
+      pm1.setPwmDuty12bit(M5PM1_Class::pwm_ch1, ((uint16_t)volume * 2048 + 127) / 255);
+    }
+    else
+    {
+      pm1.setPwmDuty12bit(M5PM1_Class::pwm_ch1, 0, pwm_polarity_t::normal, false);
+    }
+#else
+    (void)args;
+    (void)frequency;
+    (void)volume;
+#endif
   }
 
   bool M5Unified::_speaker_enabled_cb_cores3(void* args, bool enabled)
@@ -1625,9 +1680,32 @@ static constexpr const uint8_t _pin_table_mbus[][31] = {
 #elif defined (CONFIG_IDF_TARGET_ESP32C6)
     case board_t::board_M5UnitC6L:
       {
-        auto ioexp = new PI4IOE5V6408_Class(0x43);
+        In_SoftI2C.begin(I2C_NUM_0, 10, 8);
+        auto ioexp = new PI4IOE5V6408_Class(0x43, 400000, &In_SoftI2C);
         ioexp->begin();
         _io_expander[0].reset(ioexp);
+        // user button(P0) input pullup
+        _io_expander[0]->setDirection(0, false);
+        _io_expander[0]->setPullMode(0, IOExpander_Base::pull_up);
+        _io_expander[0]->setHighImpedance(0, false);
+        // sx1262 reset(P7)
+        _io_expander[0]->setDirection(7, true);
+        _io_expander[0]->setPullMode(7, IOExpander_Base::pull_none);
+        _io_expander[0]->setHighImpedance(7, false);
+        _io_expander[0]->digitalWrite(7, false);
+        delay(10);
+        _io_expander[0]->digitalWrite(7, true);
+        delay(10);
+        // LAN EN
+        _io_expander[0]->setDirection(5, true);
+        _io_expander[0]->setPullMode(5, IOExpander_Base::pull_none);
+        _io_expander[0]->setHighImpedance(5, false);
+        _io_expander[0]->digitalWrite(5, true);
+        // SW EN
+        _io_expander[0]->setDirection(6, true);
+        _io_expander[0]->setPullMode(6, IOExpander_Base::pull_none);
+        _io_expander[0]->setHighImpedance(6, false);
+        _io_expander[0]->digitalWrite(6, true);
       }
       break;
     case board_t::board_ArduinoNessoN1:
@@ -1637,6 +1715,24 @@ static constexpr const uint8_t _pin_table_mbus[][31] = {
         ioexp->begin();
         _io_expander[i].reset(ioexp);
       }
+        // sx1262 reset(P7)
+        _io_expander[0]->setDirection(7, true);
+        _io_expander[0]->setPullMode(7, IOExpander_Base::pull_none);
+        _io_expander[0]->setHighImpedance(7, false);
+        _io_expander[0]->digitalWrite(7, false);
+        delay(10);
+        _io_expander[0]->digitalWrite(7, true);
+        delay(10);
+        // LAN EN
+        _io_expander[0]->setDirection(5, true);
+        _io_expander[0]->setPullMode(5, IOExpander_Base::pull_none);
+        _io_expander[0]->setHighImpedance(5, false);
+        _io_expander[0]->digitalWrite(5, true);
+        // SW EN
+        _io_expander[0]->setDirection(6, true);
+        _io_expander[0]->setPullMode(6, IOExpander_Base::pull_none);
+        _io_expander[0]->setHighImpedance(6, false);
+        _io_expander[0]->digitalWrite(6, true);
       break;
 #elif defined (CONFIG_IDF_TARGET_ESP32S3)
     case board_t::board_M5StamPLC:
@@ -2071,6 +2167,7 @@ static constexpr const uint8_t _pin_table_mbus[][31] = {
     auto mic_cfg = Mic.config();
 
     bool(*spk_enable_cb)(void*, bool) = nullptr;
+    void(*spk_tone_cb)(void*, float, uint8_t) = nullptr;
     auto spk_cfg = Speaker.config();
 
     if (cfg.internal_mic)
@@ -2116,6 +2213,7 @@ static constexpr const uint8_t _pin_table_mbus[][31] = {
       case board_t::board_M5StackCoreS3:
       case board_t::board_M5StackCoreS3SE:
       case board_t::board_M5StackChan:
+        cfg.internal_als = true;
         if (cfg.internal_mic)
         {
           mic_cfg.magnification = 2;
@@ -2292,6 +2390,20 @@ static constexpr const uint8_t _pin_table_mbus[][31] = {
       switch (_board)
       {
 #if defined (M5UNIFIED_PC_BUILD)
+#elif defined (CONFIG_IDF_TARGET_ESP32C61)
+      case board_t::board_M5CoreMatrix:
+        if (cfg.internal_spk)
+        {
+          spk_tone_cb = _speaker_tone_cb_corematrix;
+        }
+        break;
+#elif defined (CONFIG_IDF_TARGET_ESP32C5)
+      case board_t::board_M5ToughC5:
+        if (cfg.internal_spk)
+        {
+          spk_tone_cb = _speaker_tone_cb_toughc5;
+        }
+        break;
 #elif defined (CONFIG_IDF_TARGET_ESP32C6)
       case board_t::board_M5UnitC6L:
       case board_t::board_ArduinoNessoN1:
@@ -2767,9 +2879,10 @@ static constexpr const uint8_t _pin_table_mbus[][31] = {
       Mic.setPostStartCallback(this, mic_post_start_cb);
       Mic.config(mic_cfg);
     }
-    if (spk_cfg.pin_data_out >= 0)
+    if (spk_cfg.pin_data_out >= 0 || spk_tone_cb)
     {
       Speaker.setCallback(this, spk_enable_cb);
+      Speaker.setToneCallback(this, spk_tone_cb);
       Speaker.config(spk_cfg);
     }
   }
@@ -2873,6 +2986,9 @@ static constexpr const uint8_t _pin_table_mbus[][31] = {
     if (!M5.Imu.isEnabled() && cfg.external_imu && Ex_I2C.isEnabled())
     {
       port_a_used = M5.Imu.begin(&M5.Ex_I2C) || port_a_used;
+    }
+    if (cfg.internal_als && In_I2C.isEnabled()) {
+      M5.Als.begin();
     }
     return port_a_used;
   }
@@ -2999,6 +3115,15 @@ static constexpr const uint8_t _pin_table_mbus[][31] = {
       btn_rawstate_bits |= (( raw_gpio32_39 >> (GPIO_NUM_37 & 31)) & 1    )  // gpio37 A
                          | (((raw_gpio32_39 >> (GPIO_NUM_39 & 31)) & 1)<<1); // gpio39 B
       break;
+
+    case board_t::board_M5UnitC6L:
+    {
+      use_rawstate_bits = 0b00001;
+      auto exp = static_cast<PI4IOE5V6408_Class*>(_io_expander[0].get());
+      uint8_t value = exp->readRegister8(0x0F);
+      btn_rawstate_bits = (!(value & 0b00001) ? 0b00001 : 0); // BtnA
+      break;
+    }
 
     default:
       break;

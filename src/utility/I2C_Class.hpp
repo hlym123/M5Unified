@@ -23,56 +23,56 @@ namespace m5
     /// @param port_num I2C number. (I2C_NUM_0 or I2C_NUM_1).
     /// @param pin_sda SDA pin number.
     /// @param pin_scl SCL pin number.
-    void setPort(i2c_port_t port_num, int pin_sda, int pin_scl);
+  virtual void setPort(i2c_port_t port_num, int pin_sda, int pin_scl);
 
     /// setup and begin I2C peripheral. (No communication is performed.)
     /// @param port_num I2C number. (I2C_NUM_0 or I2C_NUM_1).
     /// @param pin_sda SDA pin number.
     /// @param pin_scl SCL pin number.
     /// @return success(true) or failed(false).
-    bool begin(i2c_port_t port_num, int pin_sda, int pin_scl);
+  virtual bool begin(i2c_port_t port_num, int pin_sda, int pin_scl);
 
     /// begin I2C peripheral. (No communication is performed.)
     /// @return success(true) or failed(false).
-    bool begin(void);
+  virtual bool begin(void);
 
     /// release I2C peripheral.
     /// @return success(true) or failed(false).
-    bool release(void) const;
+  virtual bool release(void) const;
 
     /// Sends the I2C start condition and the address of the slave.
     /// @param address slave addr.
     /// @param read bit of read flag. true=read / false=write.
     /// @return success(true) or failed(false).
-    bool start(std::uint8_t address, bool read, std::uint32_t freq) const;
+  virtual bool start(std::uint8_t address, bool read, std::uint32_t freq) const;
 
     /// Sends the I2C repeated start condition and the address of the slave.
     /// @param address slave addr.
     /// @param read bit of read flag. true=read / false=write.
     /// @return success(true) or failed(false).
-    bool restart(std::uint8_t address, bool read, std::uint32_t freq) const;
+  virtual bool restart(std::uint8_t address, bool read, std::uint32_t freq) const;
 
     /// Sends the I2C stop condition.
     /// If an ACK error occurs, return false.
     /// @return success(true) or failed(false).
-    bool stop(void) const;
+  virtual bool stop(void) const;
 
     /// Send 1 byte of data.
     /// @param data write data.
     /// @return success(true) or failed(false).
-    bool write(std::uint8_t data) const;
+  virtual bool write(std::uint8_t data) const;
 
     /// Send multiple bytes of data.
     /// @param[in] data write data array.
     /// @param     length data array length.
     /// @return success(true) or failed(false).
-    bool write(const std::uint8_t* data, std::size_t length) const;
+  virtual bool write(const std::uint8_t* data, std::size_t length) const;
 
     /// Receive multiple bytes of data.
     /// @param[out] result read data array.
     /// @param      length data array length.
     /// @return success(true) or failed(false).
-    bool read(std::uint8_t* result, std::size_t length, bool last_nack = false) const;
+  virtual bool read(std::uint8_t* result, std::size_t length, bool last_nack = false) const;
 
     //----------
 
@@ -82,7 +82,7 @@ namespace m5
     /// @param[in] data write data array.
     /// @param     length data array length.
     /// @return success(true) or failed(false).
-    bool writeRegister(std::uint8_t address, std::uint8_t reg, const std::uint8_t* data, std::size_t length, std::uint32_t freq) const;
+  virtual bool writeRegister(std::uint8_t address, std::uint8_t reg, const std::uint8_t* data, std::size_t length, std::uint32_t freq) const;
 
     /// Read multiple bytes value from the register. Performs a series of communications from START to STOP.
     /// @param address slave addr.
@@ -90,34 +90,34 @@ namespace m5
     /// @param[out] result read data array.
     /// @param      length data array length.
     /// @return success(true) or failed(false).
-    bool readRegister(std::uint8_t address, std::uint8_t reg, std::uint8_t* result, std::size_t length, std::uint32_t freq) const;
+  virtual bool readRegister(std::uint8_t address, std::uint8_t reg, std::uint8_t* result, std::size_t length, std::uint32_t freq) const;
 
     /// Write a 1-byte value to the register. Performs a series of communications from START to STOP.
     /// @param address slave addr.
     /// @param reg     register number.
     /// @param data    write data.
     /// @return success(true) or failed(false).
-    bool writeRegister8(std::uint8_t address, std::uint8_t reg, std::uint8_t data, std::uint32_t freq) const;
+  virtual bool writeRegister8(std::uint8_t address, std::uint8_t reg, std::uint8_t data, std::uint32_t freq) const;
 
     /// Read a 1-byte value from the register. Performs a series of communications from START to STOP.
     /// @param address slave addr.
     /// @param reg     register number.
     /// @return read value.
-    std::uint8_t readRegister8(std::uint8_t address, std::uint8_t reg, std::uint32_t freq) const;
+  virtual std::uint8_t readRegister8(std::uint8_t address, std::uint8_t reg, std::uint32_t freq) const;
 
     /// Write a 1-byte value to the register by bit add operation. Performs a series of communications from START to STOP.
     /// @param address slave addr.
     /// @param reg     register number.
     /// @param data    add bit data.
     /// @return success(true) or failed(false).
-    bool bitOn(std::uint8_t address, std::uint8_t reg, std::uint8_t data, std::uint32_t freq) const;
+  virtual bool bitOn(std::uint8_t address, std::uint8_t reg, std::uint8_t data, std::uint32_t freq) const;
 
     /// Write a 1-byte value to the register by bit erase operation. Performs a series of communications from START to STOP.
     /// @param address slave addr.
     /// @param reg     register number.
     /// @param data    erase bit data.
     /// @return success(true) or failed(false).
-    bool bitOff(std::uint8_t address, std::uint8_t reg, std::uint8_t data, std::uint32_t freq) const;
+  virtual bool bitOff(std::uint8_t address, std::uint8_t reg, std::uint8_t data, std::uint32_t freq) const;
 
     /// execute I2C scan. (for 7bit address)
     /// @param[out] result data array needs 120 Bytes.

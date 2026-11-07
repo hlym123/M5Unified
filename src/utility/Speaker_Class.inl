@@ -494,7 +494,7 @@ namespace m5
     PCR.i2s_tx_clkm_conf.i2s_tx_clkm_en = 1;
 #if defined (CONFIG_IDF_TARGET_ESP32C6)
     PCR.pll_div_clk_en.pll_240m_clk_en = 1;
-#elif defined (CONFIG_IDF_TARGET_ESP32C61)
+#elif defined (CONFIG_IDF_TARGET_ESP32C61) || defined (CONFIG_IDF_TARGET_ESP32C5)
     PCR.pll_div_clk_en.pll_120m_clk_en = 1;
 #endif
 #elif defined ( I2S_TX_CLKM_DIV_X )
@@ -1042,6 +1042,57 @@ label_continue_sample:
 #endif
   }
 
+#if defined (CONFIG_IDF_TARGET_ESP32C61) || defined (CONFIG_IDF_TARGET_ESP32C5)
+  void Speaker_Class::external_tone_task(void* args)
+  {
+    auto self = (Speaker_Class*)args;
+    bool notified = false;
+
+    while (self->_task_running.load(std::memory_order_acquire))
+    {
+      if (!notified) { ulTaskNotifyTake(pdTRUE, portMAX_DELAY); }
+      notified = false;
+      if (!self->_task_running.load(std::memory_order_acquire)) { break; }
+
+      self->_lock_external_tone();
+      const uint32_t generation = self->_external_tone_generation.load(std::memory_order_relaxed);
+      const uint32_t duration_ms = self->_external_tone_duration_ms;
+      const bool playing = self->_play_channel_bits.load() != 0;
+      self->_cb_set_tone(self->_cb_set_tone_args
+                       , playing ? self->_external_tone_frequency : 0
+                       , playing ? self->_external_tone_volume : 0);
+      self->_external_tone_lock.clear(std::memory_order_release);
+
+      if (!playing || duration_ms == UINT32_MAX) { continue; }
+
+      TickType_t wait_ticks = pdMS_TO_TICKS(duration_ms);
+      if (wait_ticks == 0) { wait_ticks = 1; }
+      notified = ulTaskNotifyTake(pdTRUE, wait_ticks) != 0;
+      if (notified) { continue; }
+
+      self->_lock_external_tone();
+      if (generation == self->_external_tone_generation.load(std::memory_order_relaxed))
+      {
+        self->_external_tone_duration_ms = 0;
+        self->_cb_set_tone(self->_cb_set_tone_args, 0, 0);
+        self->_play_channel_bits.store(0, std::memory_order_release);
+      }
+      self->_external_tone_lock.clear(std::memory_order_release);
+    }
+
+    self->_task_handle.store(nullptr, std::memory_order_release);
+    vTaskDelete(nullptr);
+  }
+
+  void Speaker_Class::_lock_external_tone(void)
+  {
+    while (_external_tone_lock.test_and_set(std::memory_order_acquire))
+    {
+      vTaskDelay(1);
+    }
+  }
+#endif
+
   bool Speaker_Class::begin(void)
   {
     if (_begun.load(std::memory_order_acquire)) { return true; }
@@ -1079,7 +1130,12 @@ label_continue_sample:
     bool res = true;
     if (_cb_set_enabled) { res = _cb_set_enabled(_cb_set_enabled_args, true); }
 
+#if defined (CONFIG_IDF_TARGET_ESP32C61) || defined (CONFIG_IDF_TARGET_ESP32C5)
+    const bool external_tone = _cb_set_tone != nullptr;
+    res = (external_tone || ESP_OK == _setup_i2s()) && res;
+#else
     res = (ESP_OK == _setup_i2s()) && res;
+#endif
     if (res)
     {
       _task_running.store(true, std::memory_order_release);
@@ -1088,6 +1144,25 @@ label_continue_sample:
       _task_thread_id.store(handle ? SDL_GetThreadID(handle) : 0, std::memory_order_release);
       _task_handle.store(handle, std::memory_order_release);
       res = (handle != nullptr);
+#elif defined (CONFIG_IDF_TARGET_ESP32C61) || defined (CONFIG_IDF_TARGET_ESP32C5)
+      _lock_external_tone();
+      _external_tone_stopping = false;
+      size_t stack_size = external_tone ? 2048 : 1280 + (_cfg.dma_buf_len * sizeof(uint32_t));
+      TaskHandle_t handle = nullptr;
+      auto task_func = external_tone ? external_tone_task : spk_task;
+
+#if portNUM_PROCESSORS > 1
+      if (_cfg.task_pinned_core < portNUM_PROCESSORS)
+      {
+        res = (pdPASS == xTaskCreatePinnedToCore(task_func, "spk_task", stack_size, this, _cfg.task_priority, &handle, _cfg.task_pinned_core));
+      }
+      else
+#endif
+      {
+        res = (pdPASS == xTaskCreate(task_func, "spk_task", stack_size, this, _cfg.task_priority, &handle));
+      }
+      _task_handle.store(handle, std::memory_order_release);
+      _external_tone_lock.clear(std::memory_order_release);
 #else
       size_t stack_size = 1280 + (_cfg.dma_buf_len * sizeof(uint32_t));
 
@@ -1138,6 +1213,15 @@ label_continue_sample:
 
   void Speaker_Class::_end_locked(void)
   {
+#if defined (CONFIG_IDF_TARGET_ESP32C61) || defined (CONFIG_IDF_TARGET_ESP32C5)
+    if (_cb_set_tone)
+    {
+      _lock_external_tone();
+      _external_tone_stopping = true;
+      _external_tone_generation.fetch_add(1, std::memory_order_relaxed);
+      _external_tone_lock.clear(std::memory_order_release);
+    }
+#endif
     _begun.store(false, std::memory_order_release);
     if (_cb_set_enabled) { _cb_set_enabled(_cb_set_enabled_args, false); }
     if (_task_running.load(std::memory_order_acquire))
@@ -1159,6 +1243,17 @@ label_continue_sample:
 #endif
       }
     }
+#if defined (CONFIG_IDF_TARGET_ESP32C61) || defined (CONFIG_IDF_TARGET_ESP32C5)
+    if (_cb_set_tone)
+    {
+      _lock_external_tone();
+      _external_tone_generation.fetch_add(1, std::memory_order_relaxed);
+      _external_tone_duration_ms = 0;
+      _cb_set_tone(_cb_set_tone_args, 0, 0);
+      _play_channel_bits.store(0, std::memory_order_release);
+      _external_tone_lock.clear(std::memory_order_release);
+    }
+#endif
     _play_channel_bits.store(0);
     for (size_t ch = 0; ch < sound_channel_max; ++ch)
     {
@@ -1170,12 +1265,38 @@ label_continue_sample:
       chinfo->current.clear();
     }
 #if !defined (SDL_h_)
+#if defined (CONFIG_IDF_TARGET_ESP32C61) || defined (CONFIG_IDF_TARGET_ESP32C5)
+    if (_cb_set_tone == nullptr) { _spk_i2s_driver_uninstall(_cfg.i2s_port); }
+#else
     _spk_i2s_driver_uninstall(_cfg.i2s_port);
+#endif
 #endif
   }
 
   void Speaker_Class::stop(void)
   {
+#if defined (CONFIG_IDF_TARGET_ESP32C61) || defined (CONFIG_IDF_TARGET_ESP32C5)
+    if (_cb_set_tone)
+    {
+      _lock_req();
+      _lock_external_tone();
+      auto handle = _task_handle.load(std::memory_order_acquire);
+      if (_external_tone_stopping || handle == nullptr)
+      {
+        _external_tone_lock.clear(std::memory_order_release);
+        _req_lock.store(false, std::memory_order_release);
+        return;
+      }
+      _external_tone_generation.fetch_add(1, std::memory_order_relaxed);
+      _external_tone_duration_ms = 0;
+      _cb_set_tone(_cb_set_tone_args, 0, 0);
+      _play_channel_bits.store(0, std::memory_order_release);
+      xTaskNotifyGive(handle);
+      _external_tone_lock.clear(std::memory_order_release);
+      _req_lock.store(false, std::memory_order_release);
+      return;
+    }
+#endif
     wav_info_t tmp;
     tmp.stop_current = 1;
     uint8_t bits = _play_channel_bits.load();
@@ -1187,6 +1308,13 @@ label_continue_sample:
 
   void Speaker_Class::stop(uint8_t ch)
   {
+#if defined (CONFIG_IDF_TARGET_ESP32C61) || defined (CONFIG_IDF_TARGET_ESP32C5)
+    if (_cb_set_tone)
+    {
+      if (ch >= sound_channel_max || (_play_channel_bits.load() & (1 << ch))) { stop(); }
+      return;
+    }
+#endif
     if ((size_t)ch >= sound_channel_max)
     {
       stop();
@@ -1310,6 +1438,43 @@ label_continue_sample:
 
   bool Speaker_Class::_play_raw(const void* data, size_t array_len, bool flg_16bit, bool flg_signed, float sample_rate, bool flg_stereo, uint32_t repeat_count, int channel, bool stop_current_sound, bool no_clear_index)
   {
+#if defined (CONFIG_IDF_TARGET_ESP32C61) || defined (CONFIG_IDF_TARGET_ESP32C5)
+    if (_cb_set_tone)
+    {
+      if (!no_clear_index || array_len == 0 || data == nullptr) { return false; }
+      const size_t sample_count = array_len >> flg_stereo;
+      const float frequency = sample_count ? sample_rate / sample_count : 0;
+      if (!(frequency > 0) || frequency > UINT16_MAX) { return false; }
+      size_t ch = (size_t)channel;
+      if (ch >= sound_channel_max) { ch = 0; }
+
+      // Match the upstream request/lifecycle lock order before publishing a tone.
+      _lock_req();
+      bool result = false;
+      if (_begin_raw() && _task_handle.load(std::memory_order_acquire))
+      {
+        _lock_external_tone();
+        auto handle = _task_handle.load(std::memory_order_acquire);
+        if (!_external_tone_stopping && handle
+         && (!_play_channel_bits.load() || stop_current_sound))
+        {
+          _external_tone_frequency = lroundf(frequency);
+          _external_tone_volume = ((uint16_t)_master_volume * _ch_info[ch].volume) / 255;
+          _external_tone_duration_ms = repeat_count == UINT32_MAX
+                                     ? UINT32_MAX
+                                     : std::max<uint32_t>(1, lroundf(std::max<uint32_t>(1, repeat_count) * 1000.0f / frequency));
+          _external_tone_generation.fetch_add(1, std::memory_order_relaxed);
+          _play_channel_bits.store(1 << ch);
+          xTaskNotifyGive(handle);
+          result = true;
+        }
+        _external_tone_lock.clear(std::memory_order_release);
+      }
+      _req_lock.store(false, std::memory_order_release);
+      return result;
+    }
+#endif
+
     // Only a queued request produces a release callback, so the answer is
     // false whenever nothing was queued (this used to say true for a speaker
     // that could not start and for an empty request).

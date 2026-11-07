@@ -1,0 +1,57 @@
+--- M5Unified.orig/src/M5Unified.inl
++++ M5Unified/src/M5Unified.inl
+@@ -640,6 +640,30 @@ static constexpr const uint8_t _pin_tabl
+ #endif
+   }
+ 
++  void M5Unified::_speaker_tone_cb_toughc5(void* args, float frequency, uint8_t volume)
++  {
++#if defined (CONFIG_IDF_TARGET_ESP32C5)
++    auto self = (M5Unified*)args;
++    auto& pm1 = self->Power.M5pm1;
++    if (frequency > 0 && volume)
++    {
++      pm1.setGPIOMode(M5PM1_Class::gpio4, M5PM1_Class::output);
++      pm1.setGPIOFunction(M5PM1_Class::gpio4, M5PM1_Class::special);
++      pm1.setPwmDuty12bit(M5PM1_Class::pwm_ch1, 0, pwm_polarity_t::normal, false);
++      pm1.setPwmFrequency(lroundf(frequency));
++      pm1.setPwmDuty12bit(M5PM1_Class::pwm_ch1, ((uint16_t)volume * 2048 + 127) / 255);
++    }
++    else
++    {
++      pm1.setPwmDuty12bit(M5PM1_Class::pwm_ch1, 0, pwm_polarity_t::normal, false);
++    }
++#else
++    (void)args;
++    (void)frequency;
++    (void)volume;
++#endif
++  }
++
+   bool M5Unified::_speaker_enabled_cb_cores3(void* args, bool enabled)
+   {
+     (void)args;
+@@ -2373,6 +2397,13 @@ static constexpr const uint8_t _pin_tabl
+           spk_tone_cb = _speaker_tone_cb_corematrix;
+         }
+         break;
++#elif defined (CONFIG_IDF_TARGET_ESP32C5)
++      case board_t::board_M5ToughC5:
++        if (cfg.internal_spk)
++        {
++          spk_tone_cb = _speaker_tone_cb_toughc5;
++        }
++        break;
+ #elif defined (CONFIG_IDF_TARGET_ESP32C6)
+       case board_t::board_M5UnitC6L:
+       case board_t::board_ArduinoNessoN1:
+--- M5Unified.orig/src/M5Unified.hpp
++++ M5Unified/src/M5Unified.hpp
+@@ -813,6 +813,7 @@ namespace m5
+     static bool _speaker_enabled_cb_atomic_echo(void* args, bool enabled);
+     static bool _speaker_enabled_cb_hat_spk(void* args, bool enabled);
+     static void _speaker_tone_cb_corematrix(void* args, float frequency, uint8_t volume);
++    static void _speaker_tone_cb_toughc5(void* args, float frequency, uint8_t volume);
+     static bool _microphone_enabled_cb_cores3(void* args, bool enabled);
+     static bool _microphone_enabled_cb_stickc(void* args, bool enabled);
+     static bool _microphone_enabled_cb_sticks3(void* args, bool enabled);
