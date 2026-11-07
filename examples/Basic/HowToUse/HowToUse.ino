@@ -274,6 +274,9 @@ void setup(void)
   case m5::board_t::board_M5StampS3:
     name = "StampS3";
     break;
+  case m5::board_t::board_M5StampS3Mini:
+    name = "StampS3Mini";
+    break;
   case m5::board_t::board_M5AtomS3U:
     name = "ATOMS3U";
     break;
@@ -317,7 +320,14 @@ void setup(void)
   case m5::board_t::board_M5StampC3U:
     name = "StampC3U";
     break;
+#elif defined (CONFIG_IDF_TARGET_ESP32C5)
+  case m5::board_t::board_M5StampC5:
+    name = "StampC5";
+    break;
 #elif defined (CONFIG_IDF_TARGET_ESP32C6)
+  case m5::board_t::board_M5StampC6:
+    name = "StampC6";
+    break;
   case m5::board_t::board_M5NanoC6:
     name = "NanoC6";
     break;

@@ -64,6 +64,7 @@ namespace m5
 #include "utility/Touch_Class.hpp"
 #include "utility/Log_Class.hpp"
 #include "utility/IMU_Class.hpp"
+#include "utility/LTR553_Class.hpp"
 
 #include <memory>
 #include <vector>
@@ -138,6 +139,9 @@ namespace m5
 
       /// use the speaker.
       bool internal_spk  = true;
+
+      /// use als
+      bool internal_als  = false;
 
       /// use Unit Accel & Gyro.
       bool external_imu  = false;
@@ -215,6 +219,7 @@ namespace m5
     Power_Class Power;
     RTC8563_Class Rtc;
     Touch_Class Touch;
+    LTR553_Class Als;
 
 /*
   /// List of available buttons:

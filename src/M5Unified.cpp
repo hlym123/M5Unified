@@ -871,6 +871,13 @@ static constexpr const uint8_t _pin_table_mbus[][31] = {
 
 #elif defined (CONFIG_IDF_TARGET_ESP32S3)
 
+#if defined (BOARD_ID) && BOARD_ID == 155
+    if (board == board_t::board_unknown)
+    {
+      board = board_t::board_M5StampS3Mini;
+    }
+#endif
+
     switch (m5gfx::get_pkg_ver())
     {
     default:
@@ -1032,10 +1039,22 @@ static constexpr const uint8_t _pin_table_mbus[][31] = {
       *((volatile uint32_t *)(IO_MUX_GPIO20_REG)) = tmp;
     }
 
+#elif defined (CONFIG_IDF_TARGET_ESP32C5)
+    if (board == board_t::board_unknown)
+    {
+#if defined (BOARD_ID) && BOARD_ID == 153
+      board = board_t::board_M5StampC5;
+#endif
+    }
+
 #elif defined (CONFIG_IDF_TARGET_ESP32C6)
     if (board == board_t::board_unknown)
-    { // NanoC6
+    {
+#if defined (BOARD_ID) && BOARD_ID == 154
+      board = board_t::board_M5StampC6;
+#else
       board = board_t::board_M5NanoC6;
+#endif
     }
 
 #elif defined (CONFIG_IDF_TARGET_ESP32P4)
@@ -1303,6 +1322,7 @@ static constexpr const uint8_t _pin_table_mbus[][31] = {
 #elif defined (CONFIG_IDF_TARGET_ESP32S3)
       case board_t::board_M5StackCoreS3:
       case board_t::board_M5StackCoreS3SE:
+        cfg.internal_als = true;
         if (cfg.internal_mic)
         {
           mic_cfg.magnification = 2;
@@ -1785,6 +1805,9 @@ static constexpr const uint8_t _pin_table_mbus[][31] = {
     if (!M5.Imu.isEnabled() && cfg.external_imu)
     {
       port_a_used = M5.Imu.begin(&M5.Ex_I2C) || port_a_used;
+    }
+    if (cfg.internal_als && In_I2C.isEnabled()) {
+      M5.Als.begin();
     }
     return port_a_used;
   }
